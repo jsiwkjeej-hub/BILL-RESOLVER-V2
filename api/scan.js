@@ -1,6 +1,7 @@
-const ALLOWED_HOSTS = [
+const ALLOWED_HOSTS = new Set([
   "sfl.gl",
   "safelinku.com",
+  "www.safelinku.com",
   "tinyurl.com",
   "bit.ly",
   "j.mp",
@@ -8,110 +9,30 @@ const ALLOWED_HOSTS = [
   "link-to.net",
   "clk.sh",
   "oko.sh",
-  "shrinkme.io"
-];
+  "shrinkme.io",
+]);
 
-const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
+const BLOCKED_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+]);
 
-function isAllowedHost(hostname) {
-  const host = hostname.toLowerCase();
-
-  return ALLOWED_HOSTS.some(
-    domain => host === domain || host.endsWith("." + domain)
-  );
-}
-
-function validateUrl(value) {
-  let url;
-
+function isAllowedUrl(value) {
   try {
-    url = new URL(value);
+    const url = new URL(value);
+
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !BLOCKED_HOSTS.has(url.hostname.toLowerCase()) &&
+      ALLOWED_HOSTS.has(url.hostname.toLowerCase())
+    );
   } catch {
-    throw new Error("Format URL tidak valid.");
+    return false;
   }
-
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("Hanya URL HTTP dan HTTPS yang didukung.");
-  }
-
-  if (url.username || url.password) {
-    throw new Error("URL dengan username atau password tidak didukung.");
-  }
-
-  if (!isAllowedHost(url.hostname)) {
-    throw new Error("Domain belum termasuk daftar provider yang didukung.");
-  }
-
-  return url;
-}
-
-async function resolveRedirect(input) {
-  let current = validateUrl(input);
-  const chain = [current.href];
-  const maxRedirects = 8;
-
-  for (let i = 0; i < maxRedirects; i++) {
-    const response = await fetch(current.href, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(7000),
-      headers: {
-        "User-Agent": "BillResolver/2.0",
-        "Accept": "text/html,application/xhtml+xml"
-      }
-    });
-
-    const status = response.status;
-    const location = response.headers.get("location");
-
-    if (REDIRECT_CODES.has(status) && location) {
-      const next = new URL(location, current);
-
-      // Hanya ikuti redirect menuju HTTPS/HTTP.
-      if (!["http:", "https:"].includes(next.protocol)) {
-        await response.body?.cancel();
-        throw new Error("Redirect menuju protokol yang tidak didukung.");
-      }
-
-      // Jangan izinkan redirect menuju alamat internal atau jaringan privat.
-      const hostname = next.hostname.toLowerCase();
-
-      if (
-        hostname === "localhost" ||
-        hostname.endsWith(".localhost") ||
-        hostname.endsWith(".local") ||
-        hostname === "127.0.0.1" ||
-        hostname === "::1" ||
-        hostname.startsWith("10.") ||
-        hostname.startsWith("192.168.")
-      ) {
-        await response.body?.cancel();
-        throw new Error("Redirect menuju host lokal ditolak.");
-      }
-
-      chain.push(next.href);
-      await response.body?.cancel();
-
-      // Validasi provider untuk setiap hop agar endpoint tidak menjadi
-      // proxy bebas menuju domain lain.
-      current = validateUrl(next.href);
-      continue;
-    }
-
-    await response.body?.cancel();
-
-    return {
-      final_url: current.href,
-      redirect_chain: chain,
-      http_status: status,
-      resolved: chain.length > 1,
-      message: chain.length > 1
-        ? "Redirect HTTP berhasil ditemukan."
-        : "Belum ditemukan redirect HTTP. Layanan mungkin memerlukan JavaScript atau langkah tambahan."
-    };
-  }
-
-  throw new Error("Batas redirect terlampaui.");
 }
 
 export default async function handler(req, res) {
@@ -120,43 +41,88 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
-      error: "Gunakan metode POST."
+      success: false,
+      message: "Gunakan metode POST.",
     });
   }
+
+  const { url } = req.body || {};
+
+  if (typeof url !== "string" || !isAllowedUrl(url)) {
+    return res.status(400).json({
+      success: false,
+      message: "URL tidak valid atau domain belum didukung.",
+    });
+  }
+
+  const token = process.env.BROWSERLESS_TOKEN;
+
+  if (!token) {
+    return res.status(500).json({
+      success: false,
+      message: "Konfigurasi browser belum tersedia.",
+    });
+  }
+
+  let browser;
 
   try {
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body)
-        : req.body || {};
+    const { chromium } = await import("playwright-core");
 
-    const raw = String(body.url || "").trim();
+    browser = await chromium.connectOverCDP(
+      `wss://production-sfo.browserless.io?token=${encodeURIComponent(token)}`
+    );
 
-    if (!raw) {
-      return res.status(400).json({
-        error: "Masukkan link terlebih dahulu."
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    page.setDefaultNavigationTimeout(15000);
+    page.setDefaultTimeout(5000);
+
+    await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
+
+    // Tunggu sebentar agar redirect JavaScript yang diizinkan
+    // mempunyai kesempatan untuk berjalan.
+    await page.waitForTimeout(2000);
+
+    const result = await page.evaluate(() => ({
+      currentUrl: location.href,
+      canonical: document.querySelector(
+        'link[rel="canonical"]'
+      )?.href || null,
+    }));
+
+    await context.close();
+
+    if (!isAllowedUrl(result.currentUrl)) {
+      return res.status(422).json({
+        success: false,
+        message:
+          "Tujuan berada di luar domain yang diizinkan. Tidak ada link yang dikembalikan.",
       });
     }
-
-    if (raw.length > 2048) {
-      return res.status(400).json({
-        error: "URL terlalu panjang."
-      });
-    }
-
-    const normalized = /^https?:\/\//i.test(raw)
-      ? raw
-      : "https://" + raw;
-
-    const result = await resolveRedirect(normalized);
 
     return res.status(200).json({
-      input_url: raw,
-      ...result
+      success: true,
+      final_url: result.currentUrl,
+      message: "Halaman berhasil diperiksa.",
     });
   } catch (error) {
-    return res.status(400).json({
-      error: error.message || "Link tidak dapat diproses."
+    console.error("Resolver error:", error.message);
+
+    return res.status(502).json({
+      success: false,
+      message:
+        "Browser gagal memeriksa halaman. Coba lagi nanti.",
     });
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
   }
-          }
+}
