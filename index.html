@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BILL RESOLVER V2</title>
+
+<style>
+:root {
+  --bg:#0b0715;
+  --panel:#151025;
+  --panel2:#201536;
+  --text:#f5edff;
+  --muted:#a99bbd;
+  --accent:#a855f7;
+  --accent2:#6d28d9;
+  --border:#38244e;
+  --success:#4ade80;
+  --danger:#fb7185;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+  transition:background .25s,color .25s;
+}
+
+button,input,select { font:inherit; }
+
+button { cursor:pointer; }
+
+.container {
+  width:min(760px,94%);
+  margin:auto;
+  padding:24px 0 45px;
+}
+
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:25px;
+}
+
+.brand {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.logo {
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  border-radius:15px;
+  color:white;
+  font-weight:900;
+  font-size:21px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 0 24px color-mix(in srgb,var(--accent) 35%,transparent);
+}
+
+h1 {
+  margin:0;
+  font-size:20px;
+  letter-spacing:1px;
+}
+
+.subtitle {
+  margin-top:5px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.badge {
+  padding:8px 11px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  font-size:11px;
+  color:var(--success);
+  background:var(--panel);
+}
+
+.card {
+  padding:20px;
+  margin-bottom:17px;
+  border:1px solid var(--border);
+  border-radius:19px;
+  background:var(--panel);
+  box-shadow:0 10px 35px #00000016;
+}
+
+.card-title {
+  margin:0 0 7px;
+  font-size:17px;
+}
+
+.description {
+  margin:0 0 18px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.6;
+}
+
+label {
+  display:block;
+  margin:15px 0 8px;
+  font-size:12px;
+  font-weight:bold;
+}
+
+input,select {
+  width:100%;
+  padding:13px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  outline:none;
+  color:var(--text);
+  background:var(--panel2);
+}
+
+input:focus,select:focus {
+  border-color:var(--accent);
+}
+
+button {
+  border:0;
+  border-radius:11px;
+  padding:12px 15px;
+  color:white;
+  background:var(--panel2);
+}
+
+.primary {
+  width:100%;
+  margin-top:16px;
+  padding:14px;
+  font-weight:bold;
+  background:linear-gradient(100deg,var(--accent2),var(--accent));
+}
+
+button:disabled {
+  opacity:.55;
+  cursor:wait;
+}
+
+.status {
+  margin-top:15px;
+  padding:12px;
+  border-radius:10px;
+  color:var(--muted);
+  background:var(--panel2);
+  font-size:12px;
+  line-height:1.6;
+  overflow-wrap:anywhere;
+}
+
+.result {
+  display:none;
+  margin-top:15px;
+  padding:14px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--panel2);
+}
+
+.result-url {
+  margin:10px 0;
+  overflow-wrap:anywhere;
+  font-size:13px;
+  line-height:1.6;
+}
+
+.actions {
+  display:flex;
+  gap:9px;
+  margin-top:12px;
+}
+
+.actions button { flex:1; }
+
+.copy { background:var(--accent2); }
+.open { background:#15803d; }
+
+.history-item {
+  padding:13px 0;
+  border-bottom:1px solid var(--border);
+  overflow-wrap:anywhere;
+  font-size:12px;
+  line-height:1.6;
+}
+
+.history-item:last-child { border-bottom:0; }
+
+.history-url {
+  color:var(--muted);
+  margin:5px 0;
+}
+
+.small-button {
+  margin:5px 5px 0 0;
+  padding:8px 10px;
+  font-size:11px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.setting label { margin-top:0; }
+
+.theme-preview {
+  height:8px;
+  border-radius:10px;
+  margin-bottom:10px;
+  background:linear-gradient(90deg,var(--accent2),var(--accent));
+}
+
+.empty {
+  padding:16px 0;
+  color:var(--muted);
+  font-size:13px;
+}
+
+footer {
+  padding:15px 0;
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+}
+
+@media(max-width:480px) {
+  .container { padding-top:16px; }
+  .card { padding:16px; }
+  .grid { grid-template-columns:1fr; }
+  h1 { font-size:17px; }
+  .badge { font-size:10px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <div class="brand">
+    <div class="logo">B</div>
+    <div>
+      <h1>BILL RESOLVER <span style="color:var(--accent)">V2</span></h1>
+      <div class="subtitle">SHORTLINK RESOLVER DASHBOARD</div>
+    </div>
+  </div>
+  <div class="badge">● V2 INTERFACE</div>
+</header>
+
+<section class="card">
+  <h2 class="card-title">Link Resolver</h2>
+  <p class="description">
+    Masukkan shortlink untuk memeriksa redirect dan menemukan URL tujuan jika tersedia.
+  </p>
+
+  <label for="provider">PROVIDER</label>
+  <select id="provider">
+    <option value="auto">Auto Detect</option>
+    <option value="sfl.gl">SFL.GL</option>
+    <option value="safelinku.com">Safelinku</option>
+    <option value="tinyurl.com">TinyURL</option>
+    <option value="bit.ly">Bitly</option>
+    <option value="linkvertise.com">Linkvertise</option>
+    <option value="link-to.net">Link-to.net</option>
+    <option value="clk.sh">CLK.SH</option>
+    <option value="oko.sh">OKO.SH</option>
+    <option value="shrinkme.io">ShrinkMe</option>
+    <option value="other">Layanan lainnya</option>
+  </select>
+
+  <label for="url">SHORTLINK URL</label>
+  <input id="url" type="url" maxlength="2048"
+         placeholder="https://contoh-shortlink.com/abc">
+
+  <button class="primary" id="resolveBtn">⚡ RESOLVE LINK</button>
+
+  <div class="status" id="status" aria-live="polite">
+    Siap. Masukkan link untuk memulai.
+  </div>
+
+  <div class="result" id="result">
+    <strong>URL TUJUAN</strong>
+    <div class="result-url" id="resultUrl"></div>
+    <div class="actions">
+      <button class="copy" id="copyBtn">SALIN LINK</button>
+      <button class="open" id="openBtn">OPEN LINK</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Riwayat Resolver</h2>
+  <p class="description">Riwayat tersimpan otomatis di browser ini.</p>
+  <div id="history"><div class="empty">Belum ada riwayat.</div></div>
+  <button class="small-button" id="clearHistory">Hapus Riwayat</button>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Appearance Settings</h2>
+  <p class="description">
+    Pilih tema. Pengaturan akan disimpan otomatis di browser.
+  </p>
+
+  <div class="grid">
+    <div class="setting">
+      <label for="theme">PILIH TEMA</label>
+      <select id="theme">
+        <option value="default">1. Default Dark</option>
+        <option value="purple">2. Purple Neon</option>
+        <option value="ocean">3. Ocean Blue</option>
+        <option value="crimson">4. Crimson Red</option>
+        <option value="emerald">5. Emerald Green</option>
+        <option value="gold">6. Golden</option>
+        <option value="cyber">7. Cyberpunk</option>
+        <option value="sakura">8. Sakura Pink</option>
+        <option value="midnight">9. Midnight</option>
+        <option value="arctic">10. Arctic</option>
+        <option value="owner">11. OWNER — Locked</option>
+      </select>
+    </div>
+
+    <div class="setting">
+      <label>PREVIEW</label>
+      <div class="theme-preview"></div>
+      <div class="subtitle" id="themeStatus">Tema tersimpan otomatis.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  BILL RESOLVER V2 · HTTP REDIRECT CHECKER
+  <br><br>
+  Hasil bergantung pada dukungan redirect layanan. CAPTCHA dan tugas wajib tidak dilewati.
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const themes = {
+  default: {
+    bg:"#0b0715",panel:"#151025",panel2:"#201536",
+    text:"#f5edff",muted:"#a99bbd",accent:"#a855f7",
+    accent2:"#6d28d9",border:"#38244e"
+  },
+  purple: {
+    bg:"#10051d",panel:"#1d1030",panel2:"#2a1742",
+    text:"#fff0ff",muted:"#c0a6d9",accent:"#d946ef",
+    accent2:"#9333ea",border:"#542a72"
+  },
+  ocean: {
+    bg:"#04121f",panel:"#0c2034",panel2:"#12304b",
+    text:"#e0f5ff",muted:"#93b7d1",accent:"#38bdf8",
+    accent2:"#0369a1",border:"#205071"
+  },
+  crimson: {
+    bg:"#19070b",panel:"#2b1018",panel2:"#421722",
+    text:"#fff0f2",muted:"#d7a0aa",accent:"#fb7185",
+    accent2:"#be123c",border:"#652538"
+  },
+  emerald: {
+    bg:"#06150f",panel:"#10251b",panel2:"#183829",
+    text:"#e9fff2",muted:"#9bc8ad",accent:"#34d399",
+    accent2:"#047857",border:"#28553e"
+  },
+  gold: {
+    bg:"#171107",panel:"#29200f",panel2:"#403117",
+    text:"#fff7db",muted:"#d3bd86",accent:"#facc15",
+    accent2:"#a16207",border:"#65501e"
+  },
+  cyber: {
+    bg:"#080914",panel:"#13152a",panel2:"#202342",
+    text:"#f1f2ff",muted:"#a9b0d8",accent:"#00f5d4",
+    accent2:"#7c3aed",border:"#343b65"
+  },
+  sakura: {
+    bg:"#1b0c17",panel:"#301728",panel2:"#48213b",
+    text:"#fff0f7",muted:"#ddb1c9",accent:"#f9a8d4",
+    accent2:"#db2777",border:"#693452"
+  },
+  midnight: {
+    bg:"#080d19",panel:"#111a2b",panel2:"#1b2940",
+    text:"#edf3ff",muted:"#9eafca",accent:"#818cf8",
+    accent2:"#4338ca",border:"#2d4162"
+  },
+  arctic: {
+    bg:"#edf6fc",panel:"#ffffff",panel2:"#e1eef8",
+    text:"#163047",muted:"#607d93",accent:"#0ea5e9",
+    accent2:"#0369a1",border:"#bed8e9"
+  }
+};
+
+let lastResult = "";
+let busy = false;
+
+function applyTheme(name) {
+  if (name === "owner" || !themes[name]) {
+    $("theme").value = "default";
+    $("themeStatus").textContent =
+      "Tema OWNER terkunci sampai autentikasi owner tersedia.";
+    localStorage.setItem("bill_theme", "default");
+    name = "default";
+  }
+
+  const values = themes[name];
+
+  for (const key in values) {
+    document.documentElement.style.setProperty(
+      "--" + key, values[key]
+    );
+  }
+
+  document.documentElement.style.colorScheme =
+    name === "arctic" ? "light" : "dark";
+
+  $("themeStatus").textContent = "Tema aktif: " + name;
+  localStorage.setItem("bill_theme", name);
+}
+
+function safeUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return ["http:", "https:"].includes(parsed.protocol)
+      ? parsed.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function getHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem("bill_history") || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(input, result) {
+  const history = getHistory();
+
+  history.unshift({
+    input,
+    result,
+    date: new Date().toLocaleString("id-ID")
+  });
+
+  localStorage.setItem("bill_history", JSON.stringify(history.slice(0, 20)));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = getHistory();
+  const root = $("history");
+  root.replaceChildren();
+
+  if (!history.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Belum ada riwayat.";
+    root.appendChild(empty);
+    return;
+  }
+
+  history.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+
+    const date = document.createElement("div");
+    date.textContent = item.date || "";
+
+    const url = document.createElement("div");
+    url.className = "history-url";
+    url.textContent = item.result || item.input || "";
+
+    const copy = document.createElement("button");
+    copy.className = "small-button";
+    copy.textContent = "SALIN";
+
+    copy.addEventListener("click", () => {
+      copyText(item.result || item.input || "");
+    });
+
+    row.append(date, url, copy);
+    root.appendChild(row);
+  });
+}
+
+async function copyText(value) {
+  if (!value) return;
+
+  try {
+    await navigator.clipboard.writeText(value);
+    $("status").textContent = "Link berhasil disalin.";
+  } catch {
+    const field = document.createElement("textarea");
+    field.value = value;
+    document.body.appendChild(field);
+    field.select();
+
+    try {
+      document.execCommand("copy");
+      $("status").textContent = "Link berhasil disalin.";
+    } catch {
+      $("status").textContent = "Gagal menyalin. Salin link secara manual.";
+    }
+
+    field.remove();
+  }
+}
+
+async function resolveLink() {
+  if (busy) return;
+
+  const input = $("url").value.trim();
+  const valid = safeUrl(input);
+
+  $("result").style.display = "none";
+
+  if (!valid) {
+    $("status").textContent = "Masukkan URL HTTP/HTTPS yang valid.";
+    return;
+  }
+
+  busy = true;
+  $("resolveBtn").disabled = true;
+  $("resolveBtn").textContent = "MEMPROSES...";
+
+  $("status").textContent = "Menghubungi backend resolver...";
+
+  try {
+    const response = await fetch("/api/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: valid,
+        service: $("provider").value
+      })
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("Respons backend bukan JSON yang valid.");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || "Resolver gagal memproses link.");
+    }
+
+    const destination = safeUrl(data.final_url || "");
+
+    if (!destination) {
+      $("status").textContent =
+        data.message ||
+        "URL tujuan belum ditemukan. Layanan mungkin memerlukan JavaScript, CAPTCHA, atau tugas wajib.";
+      return;
+    }
+
+    lastResult = destination;
+    $("resultUrl").textContent = destination;
+    $("result").style.display = "block";
+
+    $("status").textContent = data.message ||
+      (data.resolved
+        ? "Redirect HTTP berhasil ditemukan."
+        : "Belum ada redirect HTTP yang ditemukan.");
+
+    saveHistory(valid, destination);
+  } catch (error) {
+    $("status").textContent =
+      error.message ||
+      "Backend belum tersedia. Pastikan file api/scan.js sudah dibuat dan di-deploy.";
+  } finally {
+    busy = false;
+    $("resolveBtn").disabled = false;
+    $("resolveBtn").textContent = "⚡ RESOLVE LINK";
+  }
+}
+
+$("resolveBtn").addEventListener("click", resolveLink);
+
+$("url").addEventListener("keydown", event => {
+  if (event.key === "Enter") resolveLink();
+});
+
+$("copyBtn").addEventListener("click", () => copyText(lastResult));
+
+$("openBtn").addEventListener("click", () => {
+  const destination = safeUrl(lastResult);
+  if (!destination) return;
+
+  window.open(destination, "_blank", "noopener,noreferrer");
+});
+
+$("theme").addEventListener("change", event => {
+  applyTheme(event.target.value);
+});
+
+$("clearHistory").addEventListener("click", () => {
+  if (confirm("Hapus seluruh riwayat lokal?")) {
+    localStorage.removeItem("bill_history");
+    renderHistory();
+  }
+});
+
+const savedTheme = localStorage.getItem("bill_theme") || "purple";
+$("theme").value = themes[savedTheme] ? savedTheme : "purple";
+applyTheme($("theme").value);
+renderHistory();
+</script>
+</body>
+  </html>
